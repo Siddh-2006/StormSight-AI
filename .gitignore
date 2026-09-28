@@ -50,3 +50,6 @@ models/checkpoints/*
 Thumbs.db
 .vscode/*
 !.vscode/extensions.json
+
+# Claude Code harness state / agent worktrees (not project content)
+.claude/
