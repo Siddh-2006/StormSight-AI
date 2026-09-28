@@ -1,0 +1,52 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+*.ipynb_checkpoints
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# C++
+cpp_module/build/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.pyd
+
+# Data (large / generated)
+data/raw/*
+data/processed/*
+data/synthetic/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/synthetic/.gitkeep
+*.h5
+*.nc
+*.grib
+*.grib2
+
+# Model artifacts
+*.pt
+*.pth
+*.ckpt
+models/checkpoints/*
+!models/checkpoints/.gitkeep
+
+# Env / secrets
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
