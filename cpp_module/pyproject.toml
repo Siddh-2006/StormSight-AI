@@ -1,0 +1,17 @@
+[build-system]
+requires = ["scikit-build-core>=0.9", "pybind11>=2.12"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "nowcast_cpp"
+version = "0.1.0"
+description = "C++ optical-flow nowcasting baseline (pybind11 extension) for SIH 26072"
+requires-python = ">=3.9"
+
+[tool.scikit-build]
+# The extension module lives at the repo root of this package (cpp_module/),
+# built by the same CMakeLists.txt used for the plain CMake workflow (see
+# README.md). wheel.install-dir="." puts nowcast_cpp*.pyd at the top level
+# of the installed package/site-packages, matching `import nowcast_cpp`.
+wheel.install-dir = "."
+build-dir = "build-scikit"
