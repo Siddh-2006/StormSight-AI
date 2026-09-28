@@ -15,6 +15,7 @@ frontend/.vite/
 
 # C++
 cpp_module/build/
+cpp_module/build-scikit/
 *.o
 *.obj
 *.exe
