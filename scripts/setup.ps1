@@ -9,6 +9,12 @@ if (-not (Test-Path ".venv")) {
 Write-Host "== Installing backend Python deps ==" -ForegroundColor Cyan
 uv pip install -r backend/requirements-dev.txt -p .venv
 
+Write-Host "== Building cpp_module (optional C++ baseline; backend falls back to OpenCV if this fails) ==" -ForegroundColor Cyan
+Push-Location cpp_module
+$env:CMAKE_GENERATOR = "MinGW Makefiles"
+uv pip install --python "$PWD\..\.venv\Scripts\python.exe" --no-build-isolation .
+Pop-Location
+
 Write-Host "== Installing frontend deps ==" -ForegroundColor Cyan
 if (Test-Path "frontend/package.json") {
     Push-Location frontend

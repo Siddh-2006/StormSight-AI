@@ -28,7 +28,12 @@ logger = logging.getLogger(__name__)
 
 def train(epochs: int, episodes_per_epoch: int, batch_size: int, lr: float, horizon: int) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info("Training on device=%s", device)
+    if device.type == "cpu":
+        # Small per-step tensors on this grid size see thread-launch overhead
+        # dominate compute when torch defaults to all logical cores; a modest
+        # thread count is consistently faster here.
+        torch.set_num_threads(min(4, torch.get_num_threads()))
+    logger.info("Training on device=%s (threads=%d)", device, torch.get_num_threads())
 
     model = ConvLSTMNowcaster(in_channels=5, horizon=horizon).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)

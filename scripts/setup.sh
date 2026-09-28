@@ -12,6 +12,9 @@ echo "== Installing backend Python deps =="
 uv pip install --python .venv/Scripts/python.exe -r backend/requirements-dev.txt \
   || uv pip install --python .venv/bin/python -r backend/requirements-dev.txt
 
+echo "== Building cpp_module (optional C++ baseline; backend falls back to OpenCV if this fails) =="
+(cd cpp_module && CMAKE_GENERATOR="MinGW Makefiles" uv pip install --python ../.venv/Scripts/python.exe --no-build-isolation .) || true
+
 echo "== Installing frontend deps =="
 if [ -f "frontend/package.json" ]; then
   (cd frontend && npm install)

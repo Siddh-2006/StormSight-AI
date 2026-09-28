@@ -1,3 +1,10 @@
 -r requirements.txt
 pytest>=8.3
 httpx>=0.27
+
+# Only needed to build cpp_module (see cpp_module/README.md); backend runs
+# fine without these via the OpenCV/NumPy baseline fallback.
+scikit-build-core>=0.10
+pybind11>=2.13
+cmake>=3.29
+ninja>=1.11
