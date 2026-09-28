@@ -113,6 +113,17 @@ class ConvLSTMNowcaster(nn.Module):
         return radar_forecast, lightning_forecast
 
 
+def weighted_mse_loss(pred: torch.Tensor, target: torch.Tensor, weight_scale: float = 15.0) -> torch.Tensor:
+    """Radar reflectivity is heavily skewed toward background (most of the
+    grid is 0); plain MSE lets the model minimize loss by predicting near-zero
+    everywhere and never capturing storm cores (verified empirically — see
+    NEXT_STEPS.md / evaluation history). Weighting pixels by target intensity
+    is the same balanced-loss idea TrajGRU uses for its rain-rate bins (see
+    docs/research_notes.md section 1)."""
+    weight = 1.0 + weight_scale * target
+    return (weight * (pred - target) ** 2).mean()
+
+
 def focal_loss(pred: torch.Tensor, target: torch.Tensor, gamma: float = 2.0, alpha: float = 0.85) -> torch.Tensor:
     """Binary focal loss — lightning occurrence is a rare-event class, plain
     BCE under-predicts it (see docs/design.md section 2.2)."""

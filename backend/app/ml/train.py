@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 
 from app.core.config import CHECKPOINT_PATH, DEFAULT_HORIZON, HISTORY_LEN
 from app.ml.dataset import SyntheticNowcastDataset
-from app.ml.model import ConvLSTMNowcaster, focal_loss
+from app.ml.model import ConvLSTMNowcaster, focal_loss, weighted_mse_loss
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -37,7 +37,6 @@ def train(epochs: int, episodes_per_epoch: int, batch_size: int, lr: float, hori
 
     model = ConvLSTMNowcaster(in_channels=5, horizon=horizon).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    mse = torch.nn.MSELoss()
 
     for epoch in range(epochs):
         dataset = SyntheticNowcastDataset(epoch_size=episodes_per_epoch, horizon=horizon, base_seed=epoch * 10_000)
@@ -53,7 +52,7 @@ def train(epochs: int, episodes_per_epoch: int, batch_size: int, lr: float, hori
 
             radar_pred, lightning_pred = model(input_seq)
 
-            radar_loss = mse(radar_pred, radar_target)
+            radar_loss = weighted_mse_loss(radar_pred, radar_target)
             lightning_loss = focal_loss(lightning_pred, lightning_target)
             loss = radar_loss + lightning_loss
 
