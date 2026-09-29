@@ -1,10 +1,10 @@
 # Status & Next Steps
 
-_Last updated: 2026-09-29_
+_Last updated: 2026-09-30_
 
 ## What's working right now
 
-- **Backend** (`backend/`): FastAPI + PyTorch. Synthetic multi-channel storm generator, ConvLSTM nowcast model (dual-head: radar + lightning probability), optical-flow baseline. 11/11 tests passing. Trained a smoke-test checkpoint (3 epochs, loss decreasing: radar_mse 0.17→0.08).
+- **Backend** (`backend/`): FastAPI + PyTorch. Synthetic multi-channel storm generator, ConvLSTM nowcast model (dual-head: radar + lightning probability), optical-flow baseline. 37/37 tests passing (up from 11 — see "Buzzword/code-doc alignment pass" below). Trained a smoke-test checkpoint (3 epochs, loss decreasing: radar_mse 0.17→0.08).
 - **Frontend** (`frontend/`): React + Vite dashboard — map with radar/satellite/lightning layers, timeline scrubber, alert panel, CSI/POD/FAR/HSS verification chart, live-demo mode. Builds clean, runs standalone with mock data or against the real backend.
 - **C++ module** (`cpp_module/`): `nowcast_cpp` pybind11 extension for the optical-flow baseline — built, tested, confirmed in use by the backend (not just the OpenCV fallback).
 - **Docs**: `docs/design.md` (architecture), `docs/technical_flow.md` (frozen API contract), `docs/research_notes.md` (SOTA models/datasets research).
@@ -44,6 +44,52 @@ This is a legitimate, undersold-rather-than-oversold result for a proof-of-conce
 - **One-command dev launcher added**: `scripts/run_dev.ps1` (Windows) / `scripts/run_dev.sh` (bash) start backend + frontend together, Ctrl+C stops both. Smoke-tested working.
 - **UI layout fixed**: the map panel was being squeezed to a sliver by an `auto`-sized chart grid below it, and Leaflet had a classic stale-container-size bug causing clipped tiles — both fixed (see commit `04a9f8f`). Also wired up a CARTO Basemaps API key (removes the tile watermark) via `frontend/.env.local` — **you need to restart `npm run dev`** for that env var to take effect.
 - **Technical approach slide** (`technical_approach_nowcasting.pptx`) created — single-slide architecture diagram, "storm night" dark palette, following the format of your reference deck. Couldn't visually render it for QA (no LibreOffice on this machine) — structural validation and content extraction both passed; please eyeball it in PowerPoint before presenting.
+
+## Buzzword / code-doc alignment pass (2026-09-30)
+
+You asked for the codebase and its docs to actually be checked against
+every claim in the pitch deck / idea write-up — not just trusted to match
+by wording — with any real gaps closed in an **isolated** way (new files,
+not edits to the working, tested pipeline) reachable with **one command**
+each, so nothing about the existing demo path could regress.
+
+**Audit method**: grepped the repo for every named technique/claim
+(`focal loss`, `source dropout`, `virtual radar`/`GREMLIN`, `conformal`/
+`calibrat`, `SACHET`/`CAP`, `Heidke`/`HSS`/`Brier`, `availability mask`/
+`radar optional`, `explainable`/`why this alert`) before writing a line of
+code, so the "gap list" below is grep-verifiable, not a guess. Full
+traceability table: **`docs/buzzword_coverage.md`** — read that first if
+you want the "does the code actually back this claim" answer for any
+specific slide.
+
+**Real gaps found and closed, each as its own new, tested, isolated module**:
+- `backend/app/ml/calibration.py` — Brier score, reliability-diagram data, and a split-conformal calibrator. None of this existed before; `metrics.py` only had POD/FAR/CSI/HSS.
+- `backend/app/ml/source_dropout.py` — the per-source availability mask and source-dropout augmentation the "radar-optional by design" pitch depends on. `synthetic_generator.py` had always emitted a complete 5-channel frame with no concept of a missing source. One-command demo: `python -m app.ml.source_dropout`.
+- `backend/app/ml/virtual_radar_fill.py` + `scripts/train_virtual_radar_fill.py` — a standalone GREMLIN-style U-Net reconstructing radar from satellite+lightning+NWP alone. Trains and demos end-to-end in under a minute on CPU: `.venv/Scripts/python scripts/train_virtual_radar_fill.py`. This was the single biggest gap — the centerpiece of the pitch had zero code behind it.
+- `backend/app/ml/alert_explain.py` + `GET /api/alerts/explain` — a real, honestly-labelled (rule-based, not a trained attribution model) "why this alert" explanation per grid cell. `AlertPanel.jsx` doesn't render it yet — that's a small frontend follow-up, not done in this pass.
+- `backend/app/api/cap_format.py` + `GET /api/alerts/cap` — valid CAP 1.2 XML output (parses clean, correct namespace, `status` always `Draft`). Regional-language translation is explicitly NOT faked — flagged as a known gap in the file's own docstring and in `docs/buzzword_coverage.md`.
+
+**How "isolated" was enforced, concretely**: every new capability lives in
+a brand-new file. The only edits to existing files were additive
+(`app/main.py` gained one new `include_router` line; `app/api/schemas.py`
+gained new model classes below its existing ones). `GET /api/alerts`,
+`GET /api/nowcast`, `GET /api/state` — the frozen contract in
+`docs/technical_flow.md` — are byte-for-byte unchanged; there's now a test
+(`test_routes_alerts_explain.py::test_alerts_cap_does_not_affect_original_alerts_endpoint`)
+that asserts that directly, not just by inspection. All 11 original tests
+still pass unmodified, plus 26 new ones (37 total), plus both new
+standalone scripts were actually run (not just unit-tested) to confirm
+end-to-end behaviour — see their output logged in this same session.
+
+**What's still honestly incomplete even after this pass** (see
+`docs/buzzword_coverage.md`'s "Known gaps" section for the full reasoning):
+the conformal calibrator is real code but isn't fitted on a real held-out
+set yet; source dropout is a tested opt-in utility, not train.py's default;
+Virtual Radar Fill is trained standalone, not wired into the live
+`/api/nowcast` path; regional-language CAP alerts and district-level
+aggregation are not implemented at all. None of these were faked to look
+done — each is named explicitly as open, matching this file's own
+established style of undersell-rather-than-oversell.
 
 ## Open questions for you
 

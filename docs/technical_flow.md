@@ -25,11 +25,17 @@ sih_submission2/
 │   │   │   ├── train.py
 │   │   │   ├── infer.py
 │   │   │   ├── metrics.py        # CSI/POD/FAR/HSS
-│   │   │   └── baseline.py       # optical-flow baseline (calls cpp_module if built, else OpenCV/py fallback)
+│   │   │   ├── baseline.py       # optical-flow baseline (calls cpp_module if built, else OpenCV/py fallback)
+│   │   │   ├── calibration.py    # additive: Brier/reliability/conformal calibration (see docs/buzzword_coverage.md)
+│   │   │   ├── source_dropout.py # additive: availability mask + source-dropout augmentation (opt-in)
+│   │   │   ├── virtual_radar_fill.py  # additive: standalone GREMLIN-style U-Net, satellite+lightning -> synthetic radar
+│   │   │   └── alert_explain.py  # additive: rule-based "why this alert" attribution
 │   │   └── api/
 │   │       ├── schemas.py        # pydantic models = the contract below
 │   │       ├── routes_nowcast.py
-│   │       └── routes_alerts.py
+│   │       ├── routes_alerts.py
+│   │       ├── routes_alerts_explain.py  # additive: /api/alerts/explain, /api/alerts/cap
+│   │       └── cap_format.py     # additive: CAP 1.2 XML builder
 │   └── tests/
 ├── cpp_module/
 │   ├── CMakeLists.txt
@@ -105,6 +111,41 @@ Thresholded lightning risk, aggregated to a coarse cell/region list for a simple
   ]
 }
 ```
+
+### Additive endpoints (not part of the frozen contract above)
+
+Everything below was added in a later, isolated pass to close specific gaps
+between the pitch deck and this prototype (see `docs/buzzword_coverage.md`
+for the full traceability table). They are new URLs under `/api/alerts/`,
+not changes to `GET /api/alerts` above — its response shape is unchanged
+and still exactly as documented. Frontend and `cpp_module` were never built
+against these, so they are free to change without the "frozen interface"
+concerns that apply to section 3 proper.
+
+#### `GET /api/alerts/explain?threshold=0.6`
+Same alerts as `GET /api/alerts`, plus a `why` field (a short, honestly-labelled,
+rule-based explanation — see `backend/app/ml/alert_explain.py`) and a
+`confidence_note` field stating plainly that the probability is a raw model
+output, not yet conformally calibrated:
+
+```json
+{
+  "threshold": 0.6,
+  "alerts": [
+    {
+      "cell": [12, 34], "lat": 20.85, "lon": 78.9,
+      "probability": 0.82, "lead_time_min": 30,
+      "why": "Driven primarily by rising lightning strike density (+0.40 over the window).",
+      "confidence_note": "Raw model probability from the synthetic-data ConvLSTM checkpoint — not yet conformally calibrated against real observations. See backend/app/ml/calibration.py (fit_conformal_calibrator) and NEXT_STEPS.md."
+    }
+  ]
+}
+```
+
+#### `GET /api/alerts/cap?threshold=0.6`
+The same alerts, wrapped as a valid CAP 1.2 XML document (`application/xml`),
+built by `backend/app/api/cap_format.py`. `status` is always `Draft` — this
+prototype never claims to dispatch a real public alert.
 
 ### `POST /api/simulate/step`
 Advances the synthetic generator by one time step (demo control — lets the frontend "play" a live feed without needing a real ingestion pipeline). No body required. Returns the same shape as `GET /api/state`.

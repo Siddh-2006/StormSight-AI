@@ -9,6 +9,7 @@ See `ps.txt` for the original problem statement.
 - [`docs/design.md`](docs/design.md) — architecture and rationale.
 - [`docs/technical_flow.md`](docs/technical_flow.md) — frozen API contract, repo layout, data flow (read this before touching any interface between backend/frontend/cpp_module).
 - [`docs/research_notes.md`](docs/research_notes.md) — internet research on SOTA nowcasting models, datasets, and prior art.
+- [`docs/buzzword_coverage.md`](docs/buzzword_coverage.md) — traceability table: every claim in the pitch deck / idea write-up mapped to the file that does (or honestly doesn't yet) back it.
 - [`NEXT_STEPS.md`](NEXT_STEPS.md) — current status, open questions, what's left.
 
 ## Project structure

@@ -59,3 +59,28 @@ class AlertsResponse(BaseModel):
 class ResetRequest(BaseModel):
     seed: int | None = None
     num_cells: int = 2
+
+
+# --- Additive, isolated schemas below -------------------------------------
+# These back the new /api/alerts/explain and /api/alerts/cap endpoints
+# (routes_alerts_explain.py). They intentionally do NOT replace AlertEntry /
+# AlertsResponse above, which are the frozen contract documented in
+# docs/technical_flow.md and already relied on by the frontend and its
+# tests — see that file's own note on why. `ExplainedAlertEntry` is a
+# superset of AlertEntry's fields plus the "why"/confidence-honesty fields
+# closing the gap described in backend/app/ml/alert_explain.py.
+
+
+class ExplainedAlertEntry(BaseModel):
+    cell: tuple[int, int]
+    lat: float
+    lon: float
+    probability: float
+    lead_time_min: int
+    why: str
+    confidence_note: str
+
+
+class ExplainedAlertsResponse(BaseModel):
+    threshold: float
+    alerts: list[ExplainedAlertEntry]

@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_alerts import router as alerts_router
+from app.api.routes_alerts_explain import router as alerts_explain_router
 from app.api.routes_nowcast import router as nowcast_router
 
 app = FastAPI(
@@ -21,6 +22,7 @@ app.add_middleware(
 
 app.include_router(nowcast_router)
 app.include_router(alerts_router)
+app.include_router(alerts_explain_router)  # additive: /api/alerts/explain, /api/alerts/cap — see that file's header
 
 
 @app.get("/")
