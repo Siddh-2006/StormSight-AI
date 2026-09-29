@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { MapContainer, TileLayer, ImageOverlay, Rectangle, CircleMarker, Tooltip } from 'react-leaflet';
+import { useEffect, useMemo, useState } from 'react';
+import { MapContainer, TileLayer, ImageOverlay, Rectangle, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import { GRID_BOUNDS } from '../config';
 import { COLOR_SCALES, legendGradientCss, severityFor } from '../lib/colorScales';
 import { gridToDataUrl } from '../lib/heatmap';
@@ -16,10 +16,21 @@ const CENTER = [
   (GRID_BOUNDS.lon_min + GRID_BOUNDS.lon_max) / 2,
 ];
 
-const TILE_URLS = {
-  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-};
+// CARTO's raster basemaps now require an API key (free tier: 5M tiles/month
+// non-commercial) or they render with an "API key required" watermark. Key
+// goes in frontend/.env.local (gitignored — see .env.example), read via
+// Vite's import.meta.env. Falls back to the old unauthenticated/watermarked
+// URL if no key is configured, so the app still works without one.
+const CARTO_API_KEY = import.meta.env.VITE_CARTO_API_KEY;
+const TILE_URLS = CARTO_API_KEY
+  ? {
+      light: `https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_API_KEY}`,
+      dark: `https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_API_KEY}`,
+    }
+  : {
+      light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    };
 
 const LAYER_DEFS = [
   {
@@ -60,6 +71,29 @@ const LAYER_DEFS = [
   },
 ];
 
+// Leaflet sizes its internal tile grid/canvas once at mount. When the
+// surrounding flex/grid layout changes size afterward (data finishes
+// loading, window resizes, the verification panel below reflows), Leaflet
+// doesn't know unless told — the map then renders at its stale size and
+// looks clipped/misaligned inside the new container. Watch the actual DOM
+// size and call invalidateSize() whenever it changes.
+function MapResizeHandler() {
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer();
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(container);
+    // Also catch the very first post-mount layout settle (e.g. data load
+    // shifting the grid row heights) with a couple of delayed checks.
+    const timers = [50, 250, 800].map((ms) => setTimeout(() => map.invalidateSize(), ms));
+    return () => {
+      observer.disconnect();
+      timers.forEach(clearTimeout);
+    };
+  }, [map]);
+  return null;
+}
+
 function useOverlayUrl(grid, scaleKey) {
   return useMemo(() => {
     if (!grid) return null;
@@ -99,6 +133,7 @@ export default function MapView({ observed, forecast, leadIndex, theme, alerts }
           className="h-full w-full"
           style={{ background: 'var(--surface-1)' }}
         >
+          <MapResizeHandler />
           <TileLayer
             url={TILE_URLS[theme] || TILE_URLS.light}
             attribution='&copy; <a href="https://carto.com/attributions">CARTO</a> &copy; OpenStreetMap contributors'

@@ -122,7 +122,7 @@ export default function App() {
         </div>
       )}
 
-      <main className="grid min-h-0 flex-1 grid-cols-[1fr_320px] grid-rows-[1fr_auto] gap-3 overflow-hidden p-3">
+      <main className="grid min-h-0 flex-1 grid-cols-[1fr_320px] grid-rows-[minmax(420px,1fr)_minmax(0,300px)] gap-3 overflow-hidden p-3">
         <section className="min-h-0 row-span-1">
           <MapView
             observed={observed}

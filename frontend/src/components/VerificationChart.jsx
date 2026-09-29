@@ -40,7 +40,7 @@ function MetricMiniChart({ metric, data, theme }) {
         <span className="text-xs font-semibold text-[var(--text-primary)]">{metric.label}</span>
         <span className="text-[10px] text-[var(--text-muted)]">{metric.hint}</span>
       </div>
-      <ResponsiveContainer width="100%" height={140}>
+      <ResponsiveContainer width="100%" height={108}>
         <LineChart data={data} margin={{ top: 4, right: 12, bottom: 0, left: -16 }}>
           <CartesianGrid stroke={c.grid} vertical={false} />
           <XAxis
