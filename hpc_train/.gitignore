@@ -1,0 +1,14 @@
+# Downloaded/generated data and artifacts — large, regeneratable via the scripts.
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+checkpoints/*
+!checkpoints/.gitkeep
+logs/*
+!logs/.gitkeep
+*.log
+*.out
+*.err
+__pycache__/
+*.pyc

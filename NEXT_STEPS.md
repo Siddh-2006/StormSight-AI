@@ -32,12 +32,21 @@ This is a legitimate, undersold-rather-than-oversold result for a proof-of-conce
 
 ## Decisions made (2026-09-29)
 
-- **Real training moves to HPC.** User has a powerful HPC available — see `scripts/HPC_TRAINING.md` (workflow) and `scripts/train_hpc.sbatch` (SLURM template, needs cluster-specific `#SBATCH` edits). The local checkpoint stays a proof-of-concept until an HPC-trained one is retrieved. `backend/app/ml/infer.py` reads `hidden_channels` from the checkpoint automatically, so a bigger HPC-trained model drops in with zero code changes.
+- **Real training moves to HPC**, using **real SEVIR data**, not just synthetic. Built out `hpc_train/` — a self-contained, shippable folder with:
+  - `data_prep/download_sevir.py` + `preprocess.py`: **verified against the live SEVIR S3 bucket** (not guessed) — confirmed real byte encodings for radar (vil), satellite IR (ir107), and lightning (lght point-flash records), and tested the full pipeline end-to-end on 2 real storm events via remote streaming (correctly showed high radar/lightning + cold cloud tops for an active storm, near-zero for a calm one). One quarterly SEVIR chunk + 4 matching lightning files = 2,157 real full-coverage events, ~32GB download.
+  - `model/`: standalone copies of the ConvLSTM/metrics/synthetic-generator code (no FastAPI dependency) plus a new `dataset.py` supporting synthetic-only, real-only, or mixed training, and a `train.py` with file+console logging.
+  - `01_download_and_preprocess.sbatch` + `02_train.sbatch`: SLURM scripts matching the job-script style you provided (same `#SBATCH` conventions, `module load cuda-12.8`, `gres=shard:20`) — need your cluster's actual username/partition names filled in.
+  - `download_era5.py` for CAPE/shear (SEVIR has no NWP data) is written against the verified current CDS API format but **not end-to-end tested** — needs your own free Copernicus account/token, documented as such rather than silently assumed working.
+  - See `hpc_train/README.md` for the full workflow and honestly-labeled "verified vs. not verified" list.
+  - `backend/app/ml/infer.py` reads `hidden_channels` from the checkpoint automatically, so a bigger HPC-trained model drops in with zero code changes to backend/frontend.
 - **Fixed a real path bug found while wiring this up**: `CHECKPOINT_PATH` was a relative path that silently resolved under whatever directory a script was run from (ended up at `backend/models/checkpoints/` instead of the documented repo-root `models/checkpoints/`). Now computed from `REPO_ROOT` in `backend/app/core/config.py` — works regardless of cwd. (It was gitignored either way via the generic `*.pt` rule, so nothing leaked.)
 - **Codex dropped** for now after its reconnection-loop failure — doing remaining work directly.
 - **One-command dev launcher added**: `scripts/run_dev.ps1` (Windows) / `scripts/run_dev.sh` (bash) start backend + frontend together, Ctrl+C stops both. Smoke-tested working.
+- **UI layout fixed**: the map panel was being squeezed to a sliver by an `auto`-sized chart grid below it, and Leaflet had a classic stale-container-size bug causing clipped tiles — both fixed (see commit `04a9f8f`). Also wired up a CARTO Basemaps API key (removes the tile watermark) via `frontend/.env.local` — **you need to restart `npm run dev`** for that env var to take effect.
+- **Technical approach slide** (`technical_approach_nowcasting.pptx`) created — single-slide architecture diagram, "storm night" dark palette, following the format of your reference deck. Couldn't visually render it for QA (no LibreOffice on this machine) — structural validation and content extraction both passed; please eyeball it in PowerPoint before presenting.
 
 ## Open questions for you
 
 - Any preference on how deep to go on the pitch deck / write-up — want me to draft one?
-- When you have HPC access ready, let me know and I'll help fill in `scripts/train_hpc.sbatch`'s cluster-specific placeholders (partition/account/GPU type/walltime) if you share those details.
+- `hpc_train/`'s sbatch scripts need your actual HPC username and confirmed partition/GPU-sharing names (I used `gres=shard:20` and `module load cuda-12.8` matching your sample script, but confirm those apply to this job too).
+- Want me to wire up the ERA5 cape/shear join in `preprocess.py` (currently a placeholder), or leave that for after the first real-data training run?

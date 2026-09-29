@@ -1,0 +1,13 @@
+# ML + data-download deps for the HPC training pipeline.
+# No FastAPI/uvicorn here — this is standalone from the backend/ web service.
+torch>=2.3
+numpy>=2.1
+scipy>=1.13
+pandas>=2.2
+h5py>=3.11
+s3fs>=2024.6
+boto3>=1.34
+requests>=2.32
+tqdm>=4.66
+cdsapi>=0.7          # only needed if you run download_era5.py
+matplotlib>=3.9       # only needed for scripts/evaluate.py-style plots
