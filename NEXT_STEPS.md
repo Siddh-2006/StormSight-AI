@@ -30,9 +30,14 @@ This is a legitimate, undersold-rather-than-oversold result for a proof-of-conce
 3. **Prepare the pitch narrative**: lean on `docs/research_notes.md` for credibility (cite SEVIR, MeteoSwiss fusion paper, DGMR/NowcastNet as SOTA context), be upfront that synthetic data was a deliberate, documented choice given no dataset was issued with the PS, and frame the evaluation honestly — the architecture, verification methodology (POD/FAR/CSI/HSS), and pipeline are the deliverable; the specific checkpoint is a proof-of-concept.
 4. **Optional polish** (only if time remains): more training epochs/episodes to try to close the baseline gap; WebSocket live streaming instead of polling; district-level polygon alert aggregation instead of per-cell; real SEVIR data loader as a drop-in replacement for the synthetic generator (see `docs/research_notes.md` §3).
 
+## Decisions made (2026-09-29)
+
+- **Real training moves to HPC.** User has a powerful HPC available — see `scripts/HPC_TRAINING.md` (workflow) and `scripts/train_hpc.sbatch` (SLURM template, needs cluster-specific `#SBATCH` edits). The local checkpoint stays a proof-of-concept until an HPC-trained one is retrieved. `backend/app/ml/infer.py` reads `hidden_channels` from the checkpoint automatically, so a bigger HPC-trained model drops in with zero code changes.
+- **Fixed a real path bug found while wiring this up**: `CHECKPOINT_PATH` was a relative path that silently resolved under whatever directory a script was run from (ended up at `backend/models/checkpoints/` instead of the documented repo-root `models/checkpoints/`). Now computed from `REPO_ROOT` in `backend/app/core/config.py` — works regardless of cwd. (It was gitignored either way via the generic `*.pt` rule, so nothing leaked.)
+- **Codex dropped** for now after its reconnection-loop failure — doing remaining work directly.
+- **One-command dev launcher added**: `scripts/run_dev.ps1` (Windows) / `scripts/run_dev.sh` (bash) start backend + frontend together, Ctrl+C stops both. Smoke-tested working.
+
 ## Open questions for you
 
-- **The ConvLSTM doesn't beat the baseline yet** (see evaluation results). Given the 8GB-RAM machine makes each training iteration slow (~5-15 min depending on contention), do you want me to invest more rounds of training to try to close the gap, or present the honest current result and focus remaining time on the demo/pitch instead?
-- Should I set up a one-command "run everything" script (backend + frontend together) for the actual demo/judging moment?
 - Any preference on how deep to go on the pitch deck / write-up — want me to draft one?
-- Codex's model backend seems currently unreliable in this environment (network reconnection loop) — worth checking `codex doctor` on your end, or should I just keep doing tasks directly?
+- When you have HPC access ready, let me know and I'll help fill in `scripts/train_hpc.sbatch`'s cluster-specific placeholders (partition/account/GPU type/walltime) if you share those details.

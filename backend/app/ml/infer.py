@@ -20,9 +20,22 @@ class NowcastEngine:
     def __init__(self, horizon: int = DEFAULT_HORIZON):
         self.horizon = horizon
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = ConvLSTMNowcaster(in_channels=5, horizon=horizon).to(self.device)
+        hidden_channels = self._checkpoint_hidden_channels()
+        self.model = ConvLSTMNowcaster(in_channels=5, horizon=horizon, hidden_channels=hidden_channels).to(self.device)
         self.model.eval()
         self._load_checkpoint()
+
+    @staticmethod
+    def _checkpoint_hidden_channels() -> tuple[int, int]:
+        """Read hidden_channels from the checkpoint if present, so a bigger
+        model trained elsewhere (e.g. on HPC, see scripts/train_hpc.sbatch)
+        loads correctly without code changes here."""
+        ckpt_path = Path(CHECKPOINT_PATH)
+        if ckpt_path.exists():
+            ckpt = torch.load(ckpt_path, map_location="cpu")
+            if "hidden_channels" in ckpt:
+                return tuple(ckpt["hidden_channels"])
+        return (16, 32)
 
     def _load_checkpoint(self) -> None:
         ckpt_path = Path(CHECKPOINT_PATH)

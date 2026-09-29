@@ -3,6 +3,10 @@ documented in docs/technical_flow.md. Frontend and cpp_module must not need to
 know these; they only see the API contract."""
 from __future__ import annotations
 
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
 GRID_H = 64
 GRID_W = 64
 
@@ -31,4 +35,4 @@ DEFAULT_HORIZON = 12     # 2 hours of forecast
 # channel, used both for training targets and for alert thresholding.
 LIGHTNING_OCCURRENCE_THRESHOLD = 0.15
 
-CHECKPOINT_PATH = "models/checkpoints/convlstm.pt"
+CHECKPOINT_PATH = str(REPO_ROOT / "models" / "checkpoints" / "convlstm.pt")

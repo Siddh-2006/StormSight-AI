@@ -26,16 +26,23 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 
-def train(epochs: int, episodes_per_epoch: int, batch_size: int, lr: float, horizon: int) -> None:
+def train(
+    epochs: int,
+    episodes_per_epoch: int,
+    batch_size: int,
+    lr: float,
+    horizon: int,
+    hidden_channels: tuple[int, int] = (16, 32),
+) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if device.type == "cpu":
         # Small per-step tensors on this grid size see thread-launch overhead
         # dominate compute when torch defaults to all logical cores; a modest
-        # thread count is consistently faster here.
+        # thread count is consistently faster here. Irrelevant on GPU.
         torch.set_num_threads(min(4, torch.get_num_threads()))
-    logger.info("Training on device=%s (threads=%d)", device, torch.get_num_threads())
+    logger.info("Training on device=%s (threads=%d, hidden_channels=%s)", device, torch.get_num_threads(), hidden_channels)
 
-    model = ConvLSTMNowcaster(in_channels=5, horizon=horizon).to(device)
+    model = ConvLSTMNowcaster(in_channels=5, horizon=horizon, hidden_channels=hidden_channels).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     for epoch in range(epochs):
@@ -82,6 +89,7 @@ def train(epochs: int, episodes_per_epoch: int, batch_size: int, lr: float, hori
             "model_state": model.state_dict(),
             "history_len": HISTORY_LEN,
             "horizon": horizon,
+            "hidden_channels": list(hidden_channels),
         },
         ckpt_path,
     )
@@ -95,5 +103,12 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--horizon", type=int, default=DEFAULT_HORIZON)
+    parser.add_argument(
+        "--hidden-channels",
+        type=str,
+        default="16,32",
+        help="Comma-separated encoder/decoder hidden channel widths, e.g. '32,64' for a bigger model on more capable hardware (HPC).",
+    )
     args = parser.parse_args()
-    train(args.epochs, args.episodes_per_epoch, args.batch_size, args.lr, args.horizon)
+    hidden_channels = tuple(int(x) for x in args.hidden_channels.split(","))
+    train(args.epochs, args.episodes_per_epoch, args.batch_size, args.lr, args.horizon, hidden_channels)
